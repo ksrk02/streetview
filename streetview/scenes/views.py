@@ -6,7 +6,7 @@ from .models import Scene, RelatedScene
 
 def scene_view(request):
     context = {}
-    return render(request, 'streetview/view.html', context)
+    return render(request, 'scenes/index.html', context)
 
 
 def ajax_transition(request):

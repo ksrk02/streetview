@@ -1,50 +1,13 @@
-{% extends "streetview/base.html" %}
+{% extends "scenes/base.html" %}
 {% load static %}
 
 {% block content %}
 <script type="module">
-    function getCookie(name) {
-        var cookieValue = null;
-        if (document.cookie && document.cookie !== "") {
-            var cookies = document.cookie.split(";");
-            for (var i = 0; i < cookies.length; i++) {
-                var cookie = jQuery.trim(cookies[i]);
-                // Does this cookie string begin with the name we want?
-                if (cookie.substring(0, name.length + 1) === (name + "=")) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
-            }
-        }
-        return cookieValue;
-    }
-
-    var csrftoken = getCookie("csrftoken");
-    var prefnl;
-    var predir = 0;
-
-    function csrfSafeMethod(method) {
-        // these HTTP methods do not require CSRF protection
-        return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
-    }
-
-    $.ajaxSetup({
-        beforeSend: function (xhr, settings) {
-            if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
-                xhr.setRequestHeader("X-CSRFToken", csrftoken);
-            }
-        }
-    });
-
-
-
-
-      
-    const rotationOffset = 180 / 180 * Math.PI;
+    const rotationOffset = 0 / 180 * Math.PI;
     var scene, camera, renderer;
     var controls;
     var imageUrl = "./images/puydesancy.jpg";
-    var sphere, cube;
+    var sphere;
     var clickTargets = [];
     var forwardButtonGroup = new THREE.Group();
     var sceneId;
@@ -52,16 +15,18 @@
 
     class ForwardButton extends THREE.Mesh {
         constructor() {
-            const geometry = new THREE.BoxGeometry();
-            const material = new THREE.MeshNormalMaterial();
+            const geometry = new THREE.CircleGeometry( 3, 32 );
+            const material = new THREE.MeshBasicMaterial({
+                map: new THREE.TextureLoader().load( "{% static 'scenes/images/forward.png' %}" )
+            });
             super(geometry, material);
         }
     }
 
+
     window.addEventListener("load", function() {
         checkDevice();
         init();
-        ajaxTransition();
     });
 
     window.addEventListener("resize", function() {
@@ -91,7 +56,7 @@
 
     function ajaxTransition() {
         var req = new XMLHttpRequest();
-        req.open( 'GET', "{% url 'streetview:ajax_transition' %}" + "?id=" + sceneId.toString() );
+        req.open( "GET", "{% url 'scenes:ajax_transition' %}" + "?id=" + sceneId.toString() );
         req.send();
 
         req.onreadystatechange = function() {
@@ -140,13 +105,13 @@
         scene.add( camera );
 
         renderer = new THREE.WebGLRenderer();
-        renderer.setSize( window.innerWidth, window.innerHeight );            
+        renderer.setSize( window.innerWidth, window.innerHeight );
         renderer.xr.enabled = true;
         
         document.body.appendChild( renderer.domElement );
 
         sceneId = 1;
-        renderer.domElement.click();
+        ajaxTransition();
     }
 
     function initWorld() {
@@ -177,9 +142,14 @@
 
             const radian = relatedSceneTheta[i] / 180 * Math.PI + rotationOffset;
             mesh.position.set(
-                8 * Math.cos( radian ),
-                -2,
-                8 * Math.sin( radian )
+                15 * Math.cos( radian ),
+                -5,
+                15 * Math.sin( radian )
+            );
+            mesh.rotation.set(
+                Math.PI / 2,
+                Math.PI,
+                Math.PI / 2 - radian
             );
 
             mesh.name = relatedSceneId[i].toString();
@@ -190,19 +160,16 @@
 
         scene.add( forwardButtonGroup );
 
-        rendering();
-    }
-    
-    function rendering() {
-        const animate = function() {
-            if(controls){
-                controls.update();
-            }
-            
-            renderer.render( scene, camera );
-            requestAnimationFrame( animate );
-        };
         animate();
     }
+    
+    function animate() {
+        if(controls){
+            controls.update();
+        }
+        
+        renderer.render( scene, camera );
+        requestAnimationFrame( animate );
+    };
 </script>
 {% endblock %}

@@ -1,0 +1,107 @@
+{% extends "geomap/base.html" %}
+{% load static %}
+
+{% block content %}
+<script type="module">
+    const TILESIZE = 256; 
+    var scene, camera, renderer;
+    var mapData = [];
+
+    window.addEventListener("resize", function() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize( window.innerWidth, window.innerHeight );
+    }, false);
+
+    window.addEventListener("load", function() {
+        init();
+        animate();
+    });
+
+    function init() {
+        scene = new THREE.Scene();
+        camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 0.1, 1000 );
+        camera.position.set(300, 500, 0);
+        camera.lookAt(0, 0, 0);
+        scene.add( camera );
+
+        renderer = new THREE.WebGLRenderer();
+        renderer.setSize( window.innerWidth, window.innerHeight );
+        
+        document.body.appendChild( renderer.domElement );
+
+        ajaxFileLoad();
+    }
+
+    function ajaxFileLoad() {
+        var req = new XMLHttpRequest();
+        req.open( "GET", "{% url 'geomap:ajax_fileload' %}");
+        req.send();
+
+        req.onreadystatechange = function() {
+            if (req.readyState == 4 && req.status == 200) {
+                var fileContent = JSON.parse(req.responseText).txt_list;
+
+                for(var i = 0; i < TILESIZE; i++) {
+                    var row = fileContent.slice( i * TILESIZE, (i + 1) * TILESIZE );
+                    mapData[i] = row;
+                }
+
+                drawMap();
+            }
+        }
+    }
+
+
+    function drawMap() {
+        var geometry = new THREE.BufferGeometry();
+        const itemSize = 3
+        var vertices = new Float32Array( (TILESIZE - 1) * (TILESIZE - 1) * 2 * 3 * itemSize );
+        const dx = [[ 0, 1, 1 ], [ 0, 1, 0 ]], dy = [[ 0, 0, 1 ], [ 0, 1, 1 ]];
+
+        var step = 0;
+        for(var y = 0; y < TILESIZE - 1; y++) {
+            for(var x = 0; x < TILESIZE - 1; x++) {
+                for(var i = 0; i < 2; i++) {
+                    for(var j = 0; j < 3; j++) {
+                        var z = mapData[ y + dy[i][j] ][ x + dx[i][j] ];
+                        vertices[ step ] = x + dx[i][j];
+                        vertices[ step + 1 ] = y + dy[i][j];
+                        vertices[ step + 2 ] = z;
+                        step += 3;
+                    }
+                }
+            }
+        }
+        geometry.setAttribute( "position", new THREE.BufferAttribute( vertices, itemSize ) );
+        geometry.computeVertexNormals ();
+
+        const imageUrl = "https://cyberjapandata.gsi.go.jp/xyz/std/14/14544/6450.png"
+        THREE.ImageUtils.crossOrigin = "*";
+        const texture = new THREE.TextureLoader().load( imageUrl );
+        const material = new THREE.MeshBasicMaterial({
+            map: texture
+        });
+    
+        const mesh = new THREE.Mesh( geometry, new THREE.MeshNormalMaterial() );
+        mesh.position.set( -128, 0, 128);
+        mesh.rotation.set( - 90 / 180 * Math.PI, 0, 0 );
+
+        scene.add(mesh)
+    }
+
+    function latLngtoWorldCoordinate( z, lat, lng ) {
+        const TILE_SIZE = 256;
+        const L = 85.05112878;
+        x = TILE_SIZE * Math.pow(2, z) * ( ( lat / 180 ) + 1 );
+        y = TILE_SIZE * Math.pow(2, z) * ( - Math.atan( Math.sin( Math.PI / 180 * lng )) + Math.atan( Math.sin( Math.PI / 180 * L ) ) );
+
+        return new THREE.Vector2(x, y);
+    }
+
+    function animate() {
+        renderer.render( scene, camera );
+        requestAnimationFrame( animate );
+    };
+</script>
+{% endblock %}
