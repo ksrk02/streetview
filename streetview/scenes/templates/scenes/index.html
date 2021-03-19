@@ -4,14 +4,14 @@
 {% block content %}
 <script type="module">
     const rotationOffset = 0 / 180 * Math.PI;
-    var scene, camera, renderer;
-    var controls;
-    var imageUrl = "./images/puydesancy.jpg";
-    var sphere;
-    var clickTargets = [];
-    var forwardButtonGroup = new THREE.Group();
-    var sceneId;
-    var relatedSceneId = [], relatedSceneTheta = [];
+    let scene, camera, renderer;
+    let controls;
+    let imageUrl = "./images/puydesancy.jpg";
+    let sphere;
+    let clickTargets = [];
+    let forwardButtonGroup = new THREE.Group();
+    let sceneId;
+    let relatedSceneId = [], relatedSceneTheta = [];
 
     class ForwardButton extends THREE.Mesh {
         constructor() {
@@ -37,15 +37,15 @@
 
     window.addEventListener("click", function(e) {
         if (e.target == renderer.domElement) {
-            var raycaster = new THREE.Raycaster();
-            var mouse = new THREE.Vector2();
+            let raycaster = new THREE.Raycaster();
+            let mouse = new THREE.Vector2();
 
             mouse.x = ( e.clientX / window.innerWidth ) * 2 - 1;
             mouse.y = - ( e.clientY / window.innerHeight ) * 2 + 1;
 
             raycaster.setFromCamera( mouse, camera );
 
-            var obj = raycaster.intersectObjects( clickTargets );
+            const obj = raycaster.intersectObjects( clickTargets );
             
             if ( obj.length > 0 ){
                 sceneId = parseInt(obj[0].object.name);
@@ -55,7 +55,7 @@
     });
 
     function ajaxTransition() {
-        var req = new XMLHttpRequest();
+        let req = new XMLHttpRequest();
         req.open( "GET", "{% url 'scenes:ajax_transition' %}" + "?id=" + sceneId.toString() );
         req.send();
 
@@ -137,7 +137,7 @@
     }
 
     function initObjects() {
-        for (var i = 0; i < relatedSceneId.length; i++) {
+        for (let i = 0; i < relatedSceneId.length; i++) {
             const mesh = new ForwardButton();
 
             const radian = relatedSceneTheta[i] / 180 * Math.PI + rotationOffset;

@@ -3,9 +3,10 @@
 
 {% block content %}
 <script type="module">
-    const TILESIZE = 256; 
-    var scene, camera, renderer;
-    var mapData = [];
+    const TILE_SIZE = 256;
+    const zoomLevel = 14;
+    let scene, camera, renderer;
+    let location = { latitude: 35.692103, longtitude: 139.595307 };
 
     window.addEventListener("resize", function() {
         camera.aspect = window.innerWidth / window.innerHeight;
@@ -14,9 +15,18 @@
     }, false);
 
     window.addEventListener("load", function() {
+        //getLocation();
         init();
         animate();
     });
+
+    function getLocation() {
+        navigator.geolocation.getCurrentPosition(function( position ) {
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+            location = { latitude: lat, longtitude: lng };
+        });
+    }
 
     function init() {
         scene = new THREE.Scene();
@@ -30,41 +40,41 @@
         
         document.body.appendChild( renderer.domElement );
 
-        ajaxFileLoad();
+        const tileCoordinate = getTileCoordinate( zoomLevel, location.latitude, location.longtitude );
+        loadData( zoomLevel, parseInt( tileCoordinate.x ), parseInt( tileCoordinate.y ) );
     }
 
-    function ajaxFileLoad() {
-        var req = new XMLHttpRequest();
-        req.open( "GET", "{% url 'geomap:ajax_fileload' %}");
+    function loadData( z, x, y ) {
+        let req = new XMLHttpRequest();
+        req.open( "GET", `https://cyberjapandata.gsi.go.jp/xyz/dem/${z}/${x}/${y}.txt` );
         req.send();
+        	
+        req.onload = function() {
+            let row = req.responseText.split("\n");
+            let mapData = [];
 
-        req.onreadystatechange = function() {
-            if (req.readyState == 4 && req.status == 200) {
-                var fileContent = JSON.parse(req.responseText).txt_list;
-
-                for(var i = 0; i < TILESIZE; i++) {
-                    var row = fileContent.slice( i * TILESIZE, (i + 1) * TILESIZE );
-                    mapData[i] = row;
-                }
-
-                drawMap();
+            for(let i = 0; i < TILE_SIZE; i++) {
+                mapData[i] = row[i].split(",");
             }
+            
+            const imageUrl = `https://cyberjapandata.gsi.go.jp/xyz/std/${z}/${x}/${y}.png`
+            drawMap( mapData, imageUrl );
         }
     }
 
 
-    function drawMap() {
-        var geometry = new THREE.BufferGeometry();
+    function drawMap( mapData, imageUrl ) {
+        let geometry = new THREE.BufferGeometry();
         const itemSize = 3
-        var vertices = new Float32Array( (TILESIZE - 1) * (TILESIZE - 1) * 2 * 3 * itemSize );
+        let vertices = new Float32Array( (TILE_SIZE - 1) * (TILE_SIZE - 1) * 2 * 3 * itemSize );
         const dx = [[ 0, 1, 1 ], [ 0, 1, 0 ]], dy = [[ 0, 0, 1 ], [ 0, 1, 1 ]];
 
-        var step = 0;
-        for(var y = 0; y < TILESIZE - 1; y++) {
-            for(var x = 0; x < TILESIZE - 1; x++) {
-                for(var i = 0; i < 2; i++) {
-                    for(var j = 0; j < 3; j++) {
-                        var z = mapData[ y + dy[i][j] ][ x + dx[i][j] ];
+        let step = 0;
+        for(let y = 0; y < TILE_SIZE - 1; y++) {
+            for(let x = 0; x < TILE_SIZE - 1; x++) {
+                for(let i = 0; i < 2; i++) {
+                    for(let j = 0; j < 3; j++) {
+                        let z = mapData[ y + dy[i][j] ][ x + dx[i][j] ];
                         vertices[ step ] = x + dx[i][j];
                         vertices[ step + 1 ] = y + dy[i][j];
                         vertices[ step + 2 ] = z;
@@ -76,27 +86,30 @@
         geometry.setAttribute( "position", new THREE.BufferAttribute( vertices, itemSize ) );
         geometry.computeVertexNormals ();
 
-        const imageUrl = "https://cyberjapandata.gsi.go.jp/xyz/std/14/14544/6450.png"
-        THREE.ImageUtils.crossOrigin = "*";
         const texture = new THREE.TextureLoader().load( imageUrl );
         const material = new THREE.MeshBasicMaterial({
             map: texture
         });
     
         const mesh = new THREE.Mesh( geometry, new THREE.MeshNormalMaterial() );
-        mesh.position.set( -128, 0, 128);
+        mesh.position.set( -128, 0, 128 );
         mesh.rotation.set( - 90 / 180 * Math.PI, 0, 0 );
 
-        scene.add(mesh)
+        scene.add(mesh);
     }
 
-    function latLngtoWorldCoordinate( z, lat, lng ) {
-        const TILE_SIZE = 256;
+    function getTileCoordinate( z, lat, lng ) {
         const L = 85.05112878;
-        x = TILE_SIZE * Math.pow(2, z) * ( ( lat / 180 ) + 1 );
-        y = TILE_SIZE * Math.pow(2, z) * ( - Math.atan( Math.sin( Math.PI / 180 * lng )) + Math.atan( Math.sin( Math.PI / 180 * L ) ) );
+        const pixelCoordinate = {
+            x: TILE_SIZE * Math.pow(2, z) * ( ( lng + 180 ) / 360 ),
+            y: TILE_SIZE * Math.pow(2, z) / ( 2 * Math.PI ) * ( - Math.atanh( Math.sin( Math.PI / 180 * lat )) + Math.atanh( Math.sin( Math.PI / 180 * L ) ) )
+        };
+        const tileCoordinate = {
+            x: pixelCoordinate.x / TILE_SIZE,
+            y: pixelCoordinate.y / TILE_SIZE
+        };
 
-        return new THREE.Vector2(x, y);
+        return tileCoordinate;
     }
 
     function animate() {

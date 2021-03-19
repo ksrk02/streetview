@@ -11,7 +11,7 @@ def geomap_view(request):
     return render(request, 'geomap/index.html', context)
 
 def ajax_fileload(request):
-    txt_url = 'https://cyberjapandata.gsi.go.jp/xyz/dem/14/14567/6450.txt'
+    txt_url = 'https://cyberjapandata.gsi.go.jp/xyz/dem/14/14544/6450.txt'
 
     txt_list = pd.read_csv(txt_url).values.tolist()
     txt_list = list(itertools.chain.from_iterable(txt_list))
