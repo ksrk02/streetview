@@ -2,3 +2,18 @@ body {
     margin: 0;
     overflow: hidden;
 }
+
+div#status-window {
+    background-color: #333;
+    color: #fafafa;
+    line-height: 1em;
+    opacity: .85;
+    overflow: hidden;
+    padding: 10px;
+    position: fixed;
+    top: 0px;
+    right: 0px;
+    width: 300px;
+    height: 40px;
+    z-index: 1;
+}
