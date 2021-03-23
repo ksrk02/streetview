@@ -13,7 +13,7 @@ div#status-window {
     position: fixed;
     top: 0px;
     right: 0px;
-    width: 300px;
+    width: 500px;
     height: 40px;
     z-index: 1;
 }

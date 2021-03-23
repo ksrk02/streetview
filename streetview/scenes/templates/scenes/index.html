@@ -3,15 +3,19 @@
 
 {% block content %}
 <script type="module">
+
     const rotationOffset = 0 / 180 * Math.PI;
-    let scene, camera, renderer;
+    let scene;
+    let camera;
+    let renderer;
     let controls;
     let imageUrl = "./images/puydesancy.jpg";
     let sphere;
     let clickTargets = [];
     let forwardButtonGroup = new THREE.Group();
     let sceneId;
-    let relatedSceneId = [], relatedSceneTheta = [];
+    let relatedSceneId = [];
+    let relatedSceneTheta = [];
 
     class ForwardButton extends THREE.Mesh {
         constructor() {
@@ -24,19 +28,26 @@
     }
 
 
+    window.addEventListener("resize", function() {
+
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+
+        renderer.setSize( window.innerWidth, window.innerHeight );
+        
+    }, false);
+
+
     window.addEventListener("load", function() {
         checkDevice();
         init();
     });
 
-    window.addEventListener("resize", function() {
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize( window.innerWidth, window.innerHeight );
-    }, false);
 
     window.addEventListener("click", function(e) {
+
         if (e.target == renderer.domElement) {
+
             let raycaster = new THREE.Raycaster();
             let mouse = new THREE.Vector2();
 
@@ -55,12 +66,16 @@
     });
 
     function ajaxTransition() {
+
         let req = new XMLHttpRequest();
+
         req.open( "GET", "{% url 'scenes:ajax_transition' %}" + "?id=" + sceneId.toString() );
         req.send();
 
         req.onreadystatechange = function() {
+
             if (req.readyState == 4 && req.status == 200) {
+
                 imageUrl = JSON.parse(req.responseText).scene_image_url;
                 relatedSceneId = JSON.parse(req.responseText).relatedscene_id;
                 relatedSceneTheta = JSON.parse(req.responseText).relatedscene_theta;
@@ -72,7 +87,9 @@
 
 
     function checkDevice(){
+
         if ("xr" in navigator) {
+
             navigator.xr.isSessionSupported("immersive-vr").then(function(supported) {
                 if(supported) {
                     renderer.xr.enabled = true;
@@ -86,16 +103,21 @@
     }
 
     function setController() {
+
         document.addEventListener("touchmove", function(e) { e.preventDefault(); }, { passive:false });
+
         controls = new THREE.OrbitControls( camera, renderer.domElement );
+
         controls.target.set( 0, 0, 0 );
         controls.enableDamping = true;
         controls.dampingFactor = 0.5;
-        controls.enableZoom = false;
+        controls.enableZoom = true;
     }
 
     function init() {
+
         scene = new THREE.Scene();
+
         camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 0.1, 1000 );
         camera.position.set(
             - Math.cos( rotationOffset ),
@@ -115,12 +137,15 @@
     }
 
     function initWorld() {
+
         while(forwardButtonGroup.children.length > 0){ 
             forwardButtonGroup.remove( forwardButtonGroup.children[0] );
         }
+
         while(scene.children.length > 0){ 
             scene.remove( scene.children[0] );
         }
+
 
         const geometry = new THREE.SphereGeometry( 100, 100, 100 );
         geometry.scale( -1, 1, 1 );
@@ -137,10 +162,13 @@
     }
 
     function initObjects() {
+
         for (let i = 0; i < relatedSceneId.length; i++) {
+
             const mesh = new ForwardButton();
 
             const radian = relatedSceneTheta[i] / 180 * Math.PI + rotationOffset;
+
             mesh.position.set(
                 15 * Math.cos( radian ),
                 -5,
@@ -153,6 +181,7 @@
             );
 
             mesh.name = relatedSceneId[i].toString();
+            
             clickTargets.push( mesh );
 
             forwardButtonGroup.add(mesh);
@@ -164,6 +193,7 @@
     }
     
     function animate() {
+
         if(controls){
             controls.update();
         }
@@ -171,5 +201,6 @@
         renderer.render( scene, camera );
         requestAnimationFrame( animate );
     };
+
 </script>
 {% endblock %}
